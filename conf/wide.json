@@ -1,0 +1,11 @@
+{
+    "ServerPort": "8080",
+    "StaticServerScheme": "http",
+    "StaticServerHost": "localhost",
+    "StaticServerPort": "8080",
+    "StaticResourceVersion": "",
+    "ContextPath": "",
+    "StaticPath": "",
+    "RuntimeMode": "dev",
+    "ProjectHome": "D:\\projects"
+}
