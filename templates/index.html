@@ -9,7 +9,6 @@
 		<script type="text/javascript" src="{{.StaticServer}}/static/codemirror-4.4/codemirror.js"></script>
 		<script type="text/javascript" src="{{.StaticServer}}/static/codemirror-4.4/mode/go/go.js"></script>
 		<script type="text/javascript" src="{{.StaticServer}}/static/js/lib/jquery-2.1.1.min.js"></script>
-		<script type="text/javascript" src="{{.StaticServer}}/static/bootstrap/bootstrap.min.js"></script>
 	</head>
 	
 	<body>
@@ -87,6 +86,9 @@ func main() {
 					type: 'POST',
 					url: '/run',
 					data: JSON.stringify(request),
+					beforeSend: function(data) {
+						$('#output').val('');
+					},
 					success: function(data) {
 						console.log(data);
 					},

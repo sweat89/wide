@@ -54,7 +54,11 @@ func run(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fout.WriteString(m["code"].(string))
+	code := m["code"].(string)
+
+	glog.Info(string(code[192]))
+
+	fout.WriteString(code)
 
 	if err := fout.Close(); nil != err {
 		glog.Error(err)
