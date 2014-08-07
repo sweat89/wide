@@ -4,9 +4,14 @@
 		<meta charset="UTF-8">
 		<title>Wide Demo</title>
 		<link rel="stylesheet" href="{{.StaticServer}}/static/codemirror-4.4/codemirror.css">
+		<link rel="stylesheet" href="{{.StaticServer}}/static/codemirror-4.4/addon/hint/show-hint.css">
+		  
 		<link rel="stylesheet" href="{{.StaticServer}}/static/codemirror-4.4/theme/lesser-dark.css">
+		<link rel="stylesheet" href="{{.StaticServer}}/static/css/base.css">
 		
 		<script type="text/javascript" src="{{.StaticServer}}/static/codemirror-4.4/codemirror.js"></script>
+		<script type="text/javascript" src="{{.StaticServer}}/static/codemirror-4.4/addon/hint/show-hint.js"></script>
+		<script type="text/javascript" src="{{.StaticServer}}/static/js/go-hint.js"></script>
 		<script type="text/javascript" src="{{.StaticServer}}/static/codemirror-4.4/mode/go/go.js"></script>
 		<script type="text/javascript" src="{{.StaticServer}}/static/js/lib/jquery-2.1.1.min.js"></script>
 		<script type="text/javascript" src="{{.StaticServer}}/static/js/lib/reconnecting-websocket.js"></script>
@@ -37,42 +42,48 @@ func main() {
 	}
 }
 					</textarea>
+					<div id="autocompleteHint" class="autocompleteHint"></div>
 				</div>
 			</div>	
 	
 			<div>
-				<button id='runBtn' onclick='run()'>Run</button>
-				<button id='fmtBtn' onclick='fmt()'>Format</button>
+				<button id="saveBtn" onclick="save()">Save</button>
+				<button id="runBtn" onclick="run()">Run</button>
+				<button id="fmtBtn" onclick="fmt()">Format</button>
 			</div>
 
 			<div>			
-				<textarea id='output' rows='10' cols='80'></textarea>
+				<textarea id="output" rows="10" cols="80"></textarea>
 			</div>
 			
 		</div>
 		
-		<script type="text/javascript">      
+		<script type="text/javascript">
+			autocompleteHints = [];
+			      
+			CodeMirror.commands.autocomplete = function(cm) {
+        		cm.showHint({hint: CodeMirror.hint.go});
+      		}
+	
 			var editor = CodeMirror.fromTextArea(document.getElementById('code'), {
 				mode: 'go',
 				lineNumbers: true,
-				theme: 'lesser-dark'
+				theme: 'lesser-dark',
+				extraKeys: {
+					"Ctrl-\\": "autocomplete"
+				}
 		  	});
 			
+			editor.addKeyMap({
+				/*
+			  	"'.'": function(cm) {
+			  	  	
+			  	}*/
+			});
+			
 			editor.on('keyup', function(cm, event) {
-				console.log(event);
 				
-				console.log(cm.getCursor());
 				
-				if (190 === event.keyCode) { // 按下 .
-					// 自动补全
-					var data = {
-						code: cm.getValue(),
-						cursorLine: cm.getCursor().line,
-						cursorCh: cm.getCursor().ch
-					};
-					
-					editorWS.send(JSON.stringify(data));					
-				}
 			});
 			
 			outputWS = new WebSocket('ws://localhost:8080/output/ws');
@@ -98,7 +109,19 @@ func main() {
 		        console.log('[editor onopen] connected');
 		    }
 		    editorWS.onmessage = function(e) {
-				console.log('[editor onmessage]' + e.data);
+				// console.log('[editor onmessage]' + e.data);
+				
+				var data = JSON.parse(e.data);
+				
+				if ('autocomplete' === data.cmd) {
+					var autocompleteArray = JSON.parse(data.output)[1];
+					
+					for	(var i = 0; i < autocompleteArray.length; i++) {
+						autocompleteHints[i] = '(' + autocompleteArray[i].class + ')' + autocompleteArray[i].name;
+					}
+					
+					// console.log(autocompleteHints);
+				}
 		    }
 		    editorWS.onclose = function(e) {
 		        console.log('[editor onclose] disconnected (' + e.code + ')');
@@ -125,25 +148,42 @@ func main() {
 		    }
 			*/
 			
+			function save() {
+				var request = {
+					"project": "hello",
+					"file": "main.go",
+					"code": editor.getValue()
+				};
+				
+				$.ajax({
+					type: 'POST',
+					url: '/save',
+					data: JSON.stringify(request),
+					dataType: "json",
+					success: function(data) {
+						console.log(data);
+					}
+				});
+			}
+			
 			function run() {
 				var request = {
 					"project": "hello",
 					"file": "main.go",
-					"code": editor.getValue(),
-					"cursor": editor.getCursor()
+					"code": editor.getValue()
 				};
 				
 				$.ajax({
 					type: 'POST',
 					url: '/run',
 					data: JSON.stringify(request),
+					dataType: "json",
 					beforeSend: function(data) {
 						$('#output').val('');
 					},
 					success: function(data) {
 						console.log(data);
-					},
-					dataType: "json"
+					}
 				});
 			}
 			
@@ -160,12 +200,12 @@ func main() {
 					type: 'POST',
 					url: '/fmt',
 					data: JSON.stringify(request),					
+					dataType: "json",
 					success: function(data) {
 						if (data.succ) {
 							editor.setValue(data.code);
 						}
-					},
-					dataType: "json"
+					}
 				});
 			}
 		</script>

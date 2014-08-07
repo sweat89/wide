@@ -1,5 +1,10 @@
 package main
 
+// TODO:
+// 1. 项目支持
+// 2. 编辑锁
+// 3. Shell
+
 import (
 	"bytes"
 	"encoding/json"
@@ -40,6 +45,48 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	t.Execute(w, map[string]string{"StaticServer": conf.Wide.StaticServer})
+}
+
+func saveHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+
+	var args map[string]interface{}
+
+	if err := decoder.Decode(&args); err != nil {
+		glog.Error(err)
+		http.Error(w, err.Error(), 500)
+
+		return
+	}
+
+	projectName := args["project"].(string)
+	projectPath := conf.Wide.ProjectHome + PATH_SEPARATOR + projectName
+	filePath := projectPath + PATH_SEPARATOR + args["file"].(string)
+
+	fout, err := os.Create(filePath)
+
+	if nil != err {
+		glog.Error(err)
+		http.Error(w, err.Error(), 500)
+
+		return
+	}
+
+	code := args["code"].(string)
+
+	fout.WriteString(code)
+
+	if err := fout.Close(); nil != err {
+		glog.Error(err)
+		http.Error(w, err.Error(), 500)
+
+		return
+	}
+
+	ret, _ := json.Marshal(map[string]interface{}{"succ": true})
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(ret)
 }
 
 func runHandler(w http.ResponseWriter, r *http.Request) {
@@ -209,7 +256,7 @@ func editorWSHandler(w http.ResponseWriter, r *http.Request) {
 
 	editorWS[sid], _ = websocket.Upgrade(w, r, nil, 1024, 1024)
 
-	ret := map[string]interface{}{"output": "Editor initialized"}
+	ret := map[string]interface{}{"output": "Editor initialized", "cmd": "init"}
 	editorWS[sid].WriteJSON(&ret)
 
 	glog.Info("Editor channels: ", len(outputWS))
@@ -235,7 +282,7 @@ func editorWSHandler(w http.ResponseWriter, r *http.Request) {
 
 		offset := getCursorOffset(code, line, ch)
 
-		glog.Infof("offset: %d", offset)
+		// glog.Infof("offset: %d", offset)
 
 		argv := []string{"-f=json", "autocomplete", strconv.Itoa(offset)}
 
@@ -250,7 +297,9 @@ func editorWSHandler(w http.ResponseWriter, r *http.Request) {
 		stdin.Close()
 		cmd.Wait()
 
-		if err := editorWS[sid].WriteJSON(string(output.Bytes())); err != nil {
+		ret = map[string]interface{}{"output": string(output.Bytes()), "cmd": "autocomplete"}
+
+		if err := editorWS[sid].WriteJSON(&ret); err != nil {
 			glog.Error("Editor WS ERROR: " + err.Error())
 			return
 		}
@@ -261,6 +310,7 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/save", saveHandler)
 	http.HandleFunc("/run", runHandler)
 	http.HandleFunc("/fmt", fmtHandler)
 

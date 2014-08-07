@@ -1,0 +1,21 @@
+.autocompleteHint {
+	position: absolute;
+	height: 180px;
+	width: 230px;
+	background-color: #FFF;
+	top: 50px;
+	left: 70px;
+	z-index: 10;
+	display: none;
+	overflow: auto;
+	border:1px solid #DDD;
+}
+
+.autocompleteHint ul {
+	padding:5px;
+	margin:0;
+}
+
+.autocompleteHint li {
+	list-style: none;
+}
