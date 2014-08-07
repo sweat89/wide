@@ -12,13 +12,13 @@
 	</head>
 	
 	<body>
-		<div class="container">
-			<div class="row">
-				<div class="col-sm-12"></div>
+		<div>
+			<div>
+				<div></div>
 			</div>
 			
-			<div class="row">
-				<div class="col-sm-12">			
+			<div >
+				<div>			
 					<textarea id="code" name="code">
 // You can edit this code!
 // Click here and start typing.
@@ -39,11 +39,12 @@ func main() {
 				</div>
 			</div>	
 	
-			<div class="row">
+			<div>
 				<button id='runBtn' onclick='run()'>Run</button>
+				<button id='fmtBtn' onclick='fmt()'>Format</button>
 			</div>
 
-			<div class="row">			
+			<div>			
 				<textarea id='output' rows='10' cols='80'></textarea>
 			</div>
 			
@@ -91,6 +92,27 @@ func main() {
 					},
 					success: function(data) {
 						console.log(data);
+					},
+					dataType: "json"
+				});
+			}
+			
+			function fmt() {
+				var request = {
+					"project": "hello",
+					"file": "main.go",
+					"code": editor.getValue(),
+					"cursor": editor.getCursor()
+				};
+				
+				$.ajax({
+					type: 'POST',
+					url: '/fmt',
+					data: JSON.stringify(request),					
+					success: function(data) {
+						if (data.succ) {
+							editor.setValue(data.code);
+						}
 					},
 					dataType: "json"
 				});

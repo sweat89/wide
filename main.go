@@ -109,8 +109,65 @@ func run(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ret, _ := json.Marshal(map[string]string{"succ": "true"})
+	ret, _ := json.Marshal(map[string]interface{}{"succ": true})
 
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(ret)
+}
+
+func fmt(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+
+	var c interface{}
+
+	if err := decoder.Decode(&c); err != nil {
+		glog.Error(err)
+		http.Error(w, err.Error(), 500)
+
+		return
+	}
+
+	m := c.(map[string]interface{})
+
+	projectName := m["project"].(string)
+	projectPath := conf.Wide.ProjectHome + PATH_SEPARATOR + projectName
+	filePath := projectPath + PATH_SEPARATOR + m["file"].(string)
+
+	fout, err := os.Create(filePath)
+
+	if nil != err {
+		glog.Error(err)
+		http.Error(w, err.Error(), 500)
+
+		return
+	}
+
+	code := m["code"].(string)
+
+	fout.WriteString(code)
+
+	if err := fout.Close(); nil != err {
+		glog.Error(err)
+		http.Error(w, err.Error(), 500)
+
+		return
+	}
+
+	argv := []string{filePath}
+
+	cmd := exec.Command("gofmt", argv...)
+
+	bytes, _ := cmd.Output()
+	output := string(bytes)
+
+	succ := true
+	if "" == output {
+		succ = false
+	}
+
+	ret, _ := json.Marshal(map[string]interface{}{"succ": succ, "code": string(output)})
+
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(ret)
 }
 
@@ -139,6 +196,7 @@ func main() {
 
 	http.HandleFunc("/", index)
 	http.HandleFunc("/run", run)
+	http.HandleFunc("/fmt", fmt)
 
 	http.HandleFunc("/output", output)
 
