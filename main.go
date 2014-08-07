@@ -93,21 +93,23 @@ func run(w http.ResponseWriter, r *http.Request) {
 
 	rec := map[string]interface{}{}
 
-	for {
-		buf := make([]byte, 1024)
-		count, err := reader.Read(buf)
-		if nil != err || 0 == count {
-			break
-		} else {
-			rec["output"] = string(buf)
-
-			err := outputWS.WriteJSON(&rec)
-			if nil != err {
-				glog.Error(err)
+	go func() {
+		for {
+			buf := make([]byte, 1024)
+			count, err := reader.Read(buf)
+			if nil != err || 0 == count {
 				break
+			} else {
+				rec["output"] = string(buf)
+
+				err := outputWS.WriteJSON(&rec)
+				if nil != err {
+					glog.Error(err)
+					break
+				}
 			}
 		}
-	}
+	}()
 
 	ret, _ := json.Marshal(map[string]interface{}{"succ": true})
 
