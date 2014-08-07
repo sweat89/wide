@@ -12,6 +12,7 @@ A simple <b>W</b>eb **IDE** for golang.
 * Multiplayer
 * Projects
 * Navigation & Jump
+* Shell
 
 
 ## Thanks to ##
