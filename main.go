@@ -111,15 +111,18 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		for {
 			buf := make([]byte, 1024)
 			count, err := reader.Read(buf)
+
 			if nil != err || 0 == count {
 				break
 			} else {
-				rec["output"] = string(buf)
+				rec["output"] = string(buf[:count])
 
-				err := outputWS[sid].WriteJSON(&rec)
-				if nil != err {
-					glog.Error(err)
-					break
+				if nil != outputWS[sid] {
+					err := outputWS[sid].WriteJSON(&rec)
+					if nil != err {
+						glog.Error(err)
+						break
+					}
 				}
 			}
 		}
@@ -196,6 +199,8 @@ func outputHandler(w http.ResponseWriter, r *http.Request) {
 
 	ret := map[string]interface{}{"output": "Ouput initialized\n"}
 	outputWS[sid].WriteJSON(&ret)
+
+	glog.Info("Output channels: ", len(outputWS))
 }
 
 func editorWSHandler(w http.ResponseWriter, r *http.Request) {
@@ -206,6 +211,8 @@ func editorWSHandler(w http.ResponseWriter, r *http.Request) {
 
 	ret := map[string]interface{}{"output": "Editor initialized"}
 	editorWS[sid].WriteJSON(&ret)
+
+	glog.Info("Editor channels: ", len(outputWS))
 
 	args := map[string]interface{}{}
 	for {
