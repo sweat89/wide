@@ -9,6 +9,7 @@
 		<script type="text/javascript" src="{{.StaticServer}}/static/codemirror-4.4/codemirror.js"></script>
 		<script type="text/javascript" src="{{.StaticServer}}/static/codemirror-4.4/mode/go/go.js"></script>
 		<script type="text/javascript" src="{{.StaticServer}}/static/js/lib/jquery-2.1.1.min.js"></script>
+		<script type="text/javascript" src="{{.StaticServer}}/static/js/lib/reconnecting-websocket.js"></script>
 	</head>
 	
 	<body>
@@ -57,23 +58,72 @@ func main() {
 				theme: 'lesser-dark'
 		  	});
 			
-			ws = new WebSocket('ws://localhost:8080/output');
-			ws.onopen = function() {
+			editor.on('keyup', function(cm, event) {
+				console.log(event);
+				
+				console.log(cm.getCursor());
+				
+				if (190 === event.keyCode) { // 按下 .
+					// 自动补全
+					var data = {
+						code: cm.getValue(),
+						cursorLine: cm.getCursor().line,
+						cursorCh: cm.getCursor().ch
+					};
+					
+					editorWS.send(JSON.stringify(data));					
+				}
+			});
+			
+			outputWS = new WebSocket('ws://localhost:8080/output/ws');
+			outputWS.onopen = function() {
 		        console.log('[output onopen] connected');
 		    }
-		    ws.onmessage = function(e) {
+		    outputWS.onmessage = function(e) {
 				console.log('[output onmessage]' + e.data);
 				
 				var data = JSON.parse(e.data);
 		        $('#output').val($('#output').val() + data.output);
 		    }
-		    ws.onclose = function(e) {
+		    outputWS.onclose = function(e) {
 		        console.log('[output onclose] disconnected (' + e.code + ')');
-		        delete ws;
+		        delete outputWS;
 		    }
-		    ws.onerror = function (e) {
+		    outputWS.onerror = function (e) {
 		        console.log('[output onerror] ' + e);
 		    }
+			
+			editorWS = new WebSocket('ws://localhost:8080/editor/ws');
+			editorWS.onopen = function() {
+		        console.log('[editor onopen] connected');
+		    }
+		    editorWS.onmessage = function(e) {
+				console.log('[editor onmessage]' + e.data);
+		    }
+		    editorWS.onclose = function(e) {
+		        console.log('[editor onclose] disconnected (' + e.code + ')');
+		        delete editorWS;
+		    }
+		    editorWS.onerror = function (e) {
+		        console.log('[editor onerror] ' + e);
+		    }
+			
+			/*
+			testWS = new WebSocket('ws://localhost:8083');
+			testWS.onopen = function() {
+		        console.log('[testWS onopen] connected');
+		    }
+		    testWS.onmessage = function(e) {
+				console.log('[testWS onmessage]' + e.data);				
+		    }
+		    testWS.onclose = function(e) {
+		        console.log('[testWS onclose] disconnected (' + e.code + ')');
+		        delete testWS;
+		    }
+		    testWS.onerror = function (e) {
+		        console.log('[testWS onerror] ' + e);
+		    }
+			*/
 			
 			function run() {
 				var request = {
@@ -102,7 +152,8 @@ func main() {
 					"project": "hello",
 					"file": "main.go",
 					"code": editor.getValue(),
-					"cursor": editor.getCursor()
+					"cursorLine": editor.getCursor().line,
+					"cursorCh": editor.getCursor().ch
 				};
 				
 				$.ajax({

@@ -1,20 +1,35 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"github.com/88250/wide/conf"
 	"github.com/golang/glog"
+	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
 	"html/template"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 )
 
 const PATH_SEPARATOR = string(os.PathSeparator)
 
-func index(w http.ResponseWriter, r *http.Request) {
+var sessionStore = sessions.NewCookieStore([]byte("BEYOND"))
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "wide-session")
+
+	if session.IsNew {
+		session.Values["id"] = strconv.Itoa(rand.Int())
+	}
+
+	session.Save(r, w)
+
 	t, err := template.ParseFiles("templates/index.html")
 
 	if nil != err {
@@ -27,23 +42,21 @@ func index(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, map[string]string{"StaticServer": conf.Wide.StaticServer})
 }
 
-func run(w http.ResponseWriter, r *http.Request) {
+func runHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 
-	var c interface{}
+	var args map[string]interface{}
 
-	if err := decoder.Decode(&c); err != nil {
+	if err := decoder.Decode(&args); err != nil {
 		glog.Error(err)
 		http.Error(w, err.Error(), 500)
 
 		return
 	}
 
-	m := c.(map[string]interface{})
-
-	projectName := m["project"].(string)
+	projectName := args["project"].(string)
 	projectPath := conf.Wide.ProjectHome + PATH_SEPARATOR + projectName
-	filePath := projectPath + PATH_SEPARATOR + m["file"].(string)
+	filePath := projectPath + PATH_SEPARATOR + args["file"].(string)
 
 	fout, err := os.Create(filePath)
 
@@ -54,9 +67,7 @@ func run(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code := m["code"].(string)
-
-	glog.Info(string(code[192]))
+	code := args["code"].(string)
 
 	fout.WriteString(code)
 
@@ -94,6 +105,9 @@ func run(w http.ResponseWriter, r *http.Request) {
 	rec := map[string]interface{}{}
 
 	go func() {
+		session, _ := sessionStore.Get(r, "wide-session")
+		sid := session.Values["id"].(string)
+
 		for {
 			buf := make([]byte, 1024)
 			count, err := reader.Read(buf)
@@ -102,7 +116,7 @@ func run(w http.ResponseWriter, r *http.Request) {
 			} else {
 				rec["output"] = string(buf)
 
-				err := outputWS.WriteJSON(&rec)
+				err := outputWS[sid].WriteJSON(&rec)
 				if nil != err {
 					glog.Error(err)
 					break
@@ -117,23 +131,21 @@ func run(w http.ResponseWriter, r *http.Request) {
 	w.Write(ret)
 }
 
-func fmt(w http.ResponseWriter, r *http.Request) {
+func fmtHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 
-	var c interface{}
+	var args map[string]interface{}
 
-	if err := decoder.Decode(&c); err != nil {
+	if err := decoder.Decode(&args); err != nil {
 		glog.Error(err)
 		http.Error(w, err.Error(), 500)
 
 		return
 	}
 
-	m := c.(map[string]interface{})
-
-	projectName := m["project"].(string)
+	projectName := args["project"].(string)
 	projectPath := conf.Wide.ProjectHome + PATH_SEPARATOR + projectName
-	filePath := projectPath + PATH_SEPARATOR + m["file"].(string)
+	filePath := projectPath + PATH_SEPARATOR + args["file"].(string)
 
 	fout, err := os.Create(filePath)
 
@@ -144,7 +156,7 @@ func fmt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code := m["code"].(string)
+	code := args["code"].(string)
 
 	fout.WriteString(code)
 
@@ -173,37 +185,97 @@ func fmt(w http.ResponseWriter, r *http.Request) {
 	w.Write(ret)
 }
 
-// TODO: 多会话支持
-var outputWS *websocket.Conn
+var outputWS = map[string]*websocket.Conn{}
+var editorWS = map[string]*websocket.Conn{}
 
-func output(w http.ResponseWriter, r *http.Request) {
-	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+func outputHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "wide-session")
+	sid := session.Values["id"].(string)
 
-	if _, ok := err.(websocket.HandshakeError); ok {
-		http.Error(w, "Not a websocket handshake", 400)
-		return
-	} else if err != nil {
-		glog.Error(err)
-		return
+	outputWS[sid], _ = websocket.Upgrade(w, r, nil, 1024, 1024)
+
+	ret := map[string]interface{}{"output": "Ouput initialized\n"}
+	outputWS[sid].WriteJSON(&ret)
+}
+
+func editorWSHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "wide-session")
+	sid := session.Values["id"].(string)
+
+	editorWS[sid], _ = websocket.Upgrade(w, r, nil, 1024, 1024)
+
+	ret := map[string]interface{}{"output": "Editor initialized"}
+	editorWS[sid].WriteJSON(&ret)
+
+	args := map[string]interface{}{}
+	for {
+		if err := editorWS[sid].ReadJSON(&args); err != nil {
+			if err.Error() == "EOF" {
+				return
+			}
+			// ErrShortWrite means that a write accepted fewer bytes than requested but failed to return an explicit error.
+			if err.Error() == "unexpected EOF" {
+				return
+			}
+
+			glog.Error("Editor WS ERROR: " + err.Error())
+			return
+		}
+
+		code := args["code"].(string)
+		line := int(args["cursorLine"].(float64))
+		ch := int(args["cursorCh"].(float64))
+
+		offset := getCursorOffset(code, line, ch)
+
+		glog.Infof("offset: %d", offset)
+
+		argv := []string{"-f=json", "autocomplete", strconv.Itoa(offset)}
+
+		var output bytes.Buffer
+
+		cmd := exec.Command("gocode", argv...)
+		cmd.Stdout = &output
+
+		stdin, _ := cmd.StdinPipe()
+		cmd.Start()
+		stdin.Write([]byte(code))
+		stdin.Close()
+		cmd.Wait()
+
+		if err := editorWS[sid].WriteJSON(string(output.Bytes())); err != nil {
+			glog.Error("Editor WS ERROR: " + err.Error())
+			return
+		}
 	}
-
-	outputWS = ws
-
-	ret := map[string]interface{}{"output": "Ouput 初始化完毕\n"}
-	outputWS.WriteJSON(&ret)
 }
 
 func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
-	http.HandleFunc("/", index)
-	http.HandleFunc("/run", run)
-	http.HandleFunc("/fmt", fmt)
+	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/run", runHandler)
+	http.HandleFunc("/fmt", fmtHandler)
 
-	http.HandleFunc("/output", output)
+	http.HandleFunc("/output/ws", outputHandler)
+	http.HandleFunc("/editor/ws", editorWSHandler)
 
 	err := http.ListenAndServe(":"+conf.Wide.ServerPort, nil)
 	if err != nil {
 		glog.Fatal(err)
 	}
+}
+
+// 工具
+
+func getCursorOffset(code string, line, ch int) (offset int) {
+	lines := strings.Split(code, "\n")
+
+	for i := 0; i < line; i++ {
+		offset += len(lines[i])
+	}
+
+	offset += line + ch
+
+	return
 }
