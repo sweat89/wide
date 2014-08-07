@@ -1,4 +1,23 @@
-wide
-====
+# wide #
 
-A simple Web IDE for golang
+## Intro ##
+A simple Web IDE for golang.
+
+## Features ##
+
+* Code Highlight
+* Autocomplete
+* Format
+* Run & Output
+* Multiplayer
+* Projects
+* Navigation & Jump
+
+
+## Thanks to ##
+
+* [golang](http://golang.org)
+* [CodeMirror](https://github.com/marijnh/CodeMirror)
+* [jstree](https://github.com/vakata/jstree) 
+* [gocode](https://github.com/nsf/gocode)
+* [Gorilla](https://github.com/gorilla)
