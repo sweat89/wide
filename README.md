@@ -1,7 +1,7 @@
 # wide #
 
 ## Intro ##
-A simple Web IDE for golang.
+A simple <b>W</b>eb **IDE** for golang.
 
 ## Features ##
 
