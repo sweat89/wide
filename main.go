@@ -45,7 +45,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t.Execute(w, map[string]string{"StaticServer": conf.Wide.StaticServer})
+	t.Execute(w, map[string]interface{}{"Wide": conf.Wide})
 }
 
 func saveHandler(w http.ResponseWriter, r *http.Request) {
@@ -334,8 +334,6 @@ func shellWSHandler(w http.ResponseWriter, r *http.Request) {
 			glog.Error("Shell WS ERROR: " + err.Error())
 			return
 		}
-
-		// argv := []string{"-f=json", "autocomplete", strconv.Itoa(offset)}
 
 		var output bytes.Buffer
 

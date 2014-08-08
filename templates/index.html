@@ -3,18 +3,18 @@
 	<head>
 		<meta charset="UTF-8">
 		<title>Wide</title>
-		<link rel="stylesheet" href="{{.StaticServer}}/static/codemirror-4.4/codemirror.css">
-		<link rel="stylesheet" href="{{.StaticServer}}/static/codemirror-4.4/addon/hint/show-hint.css">
+		<link rel="stylesheet" href="{{.Wide.StaticServer}}/static/codemirror-4.4/codemirror.css">
+		<link rel="stylesheet" href="{{.Wide.StaticServer}}/static/codemirror-4.4/addon/hint/show-hint.css">
 		  
-		<link rel="stylesheet" href="{{.StaticServer}}/static/codemirror-4.4/theme/lesser-dark.css">
-		<link rel="stylesheet" href="{{.StaticServer}}/static/css/base.css">
+		<link rel="stylesheet" href="{{.Wide.StaticServer}}/static/codemirror-4.4/theme/lesser-dark.css">
+		<link rel="stylesheet" href="{{.Wide.StaticServer}}/static/css/base.css">
 		
-		<script type="text/javascript" src="{{.StaticServer}}/static/codemirror-4.4/codemirror.js"></script>
-		<script type="text/javascript" src="{{.StaticServer}}/static/codemirror-4.4/addon/hint/show-hint.js"></script>
-		<script type="text/javascript" src="{{.StaticServer}}/static/js/go-hint.js"></script>
-		<script type="text/javascript" src="{{.StaticServer}}/static/codemirror-4.4/mode/go/go.js"></script>
-		<script type="text/javascript" src="{{.StaticServer}}/static/js/lib/jquery-2.1.1.min.js"></script>
-		<script type="text/javascript" src="{{.StaticServer}}/static/js/lib/reconnecting-websocket.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/codemirror.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/addon/hint/show-hint.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/js/go-hint.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/go/go.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/js/lib/jquery-2.1.1.min.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/js/lib/reconnecting-websocket.js"></script>
 	</head>
 	
 	<body>
@@ -38,6 +38,7 @@ import (
 func main() {
 	for i := 0; i < 5; i++ {
 		fmt.Println("Hello, 世界")
+		
 		time.Sleep(time.Second)
 	}
 }
@@ -47,7 +48,7 @@ func main() {
 			</div>	
 	
 			<div>
-				<button id="saveBtn" onclick="save()">Save</button>				
+				<!--<button id="saveBtn" onclick="save()">Save</button>-->
 				<button id="fmtBtn" onclick="fmt()">Format</button>
 				<button id="runBtn" onclick="run()">Run</button>
 			</div>
@@ -96,7 +97,7 @@ func main() {
 				
 			});
 			
-			outputWS = new WebSocket('ws://localhost:8080/output/ws');
+			outputWS = new WebSocket('ws://{{.Wide.OutputChannelHost}}:{{.Wide.OutputChannelPort}}/output/ws');
 			outputWS.onopen = function() {
 		        console.log('[output onopen] connected');
 		    }
@@ -114,7 +115,7 @@ func main() {
 		        console.log('[output onerror] ' + e);
 		    }
 			
-			editorWS = new WebSocket('ws://localhost:8080/editor/ws');
+			editorWS = new WebSocket('ws://{{.Wide.EditorChannelHost}}:{{.Wide.EditorChannelPort}}/editor/ws');
 			editorWS.onopen = function() {
 		        console.log('[editor onopen] connected');
 		    }
@@ -141,7 +142,7 @@ func main() {
 		        console.log('[editor onerror] ' + e);
 		    }
 			
-			shellWS = new WebSocket('ws://localhost:8080/shell/ws');
+			shellWS = new WebSocket('ws://{{.Wide.ShellChannelHost}}:{{.Wide.ShellChannelPort}}/shell/ws');
 			shellWS.onopen = function() {
 		        console.log('[shell onopen] connected');
 		    }

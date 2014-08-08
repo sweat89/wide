@@ -12,6 +12,12 @@ type Conf struct {
 	StaticServerScheme    string
 	StaticServerHost      string
 	StaticServerPort      string
+	EditorChannelHost     string
+	EditorChannelPort     string
+	OutputChannelHost     string
+	OutputChannelPort     string
+	ShellChannelHost      string
+	ShellChannelPort      string
 	StaticResourceVersion string
 	ContextPath           string
 	StaticPath            string
