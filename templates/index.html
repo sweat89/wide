@@ -32,7 +32,7 @@ package main
 
 import (
     "fmt"
-	"time"
+    "time"
 )
 
 func main() {
@@ -97,7 +97,7 @@ func main() {
 				
 			});
 			
-			outputWS = new WebSocket('ws://{{.Wide.OutputChannelHost}}:{{.Wide.OutputChannelPort}}/output/ws');
+			outputWS = new WebSocket('{{.Wide.OutputChannel}}/output/ws');
 			outputWS.onopen = function() {
 		        console.log('[output onopen] connected');
 		    }
@@ -115,7 +115,7 @@ func main() {
 		        console.log('[output onerror] ' + e);
 		    }
 			
-			editorWS = new WebSocket('ws://{{.Wide.EditorChannelHost}}:{{.Wide.EditorChannelPort}}/editor/ws');
+			editorWS = new WebSocket('{{.Wide.EditorChannel}}/editor/ws');
 			editorWS.onopen = function() {
 		        console.log('[editor onopen] connected');
 		    }
@@ -142,7 +142,7 @@ func main() {
 		        console.log('[editor onerror] ' + e);
 		    }
 			
-			shellWS = new WebSocket('ws://{{.Wide.ShellChannelHost}}:{{.Wide.ShellChannelPort}}/shell/ws');
+			shellWS = new WebSocket('{{.Wide.ShellChannel}}/shell/ws');
 			shellWS.onopen = function() {
 		        console.log('[shell onopen] connected');
 		    }

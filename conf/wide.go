@@ -12,12 +12,9 @@ type Conf struct {
 	StaticServerScheme    string
 	StaticServerHost      string
 	StaticServerPort      string
-	EditorChannelHost     string
-	EditorChannelPort     string
-	OutputChannelHost     string
-	OutputChannelPort     string
-	ShellChannelHost      string
-	ShellChannelPort      string
+	EditorChannel         string
+	OutputChannel         string
+	ShellChannel          string
 	StaticResourceVersion string
 	ContextPath           string
 	StaticPath            string
@@ -42,10 +39,13 @@ func init() {
 		return
 	}
 
-	Wide.StaticServer = Wide.StaticServerScheme +
-		"://" + Wide.StaticServerHost +
-		":" + Wide.StaticServerPort +
-		Wide.StaticPath
+	Wide.StaticServer = ""
+	if "" != Wide.StaticServerHost {
+		Wide.StaticServer = Wide.StaticServerScheme +
+			"://" + Wide.StaticServerHost +
+			":" + Wide.StaticServerPort +
+			Wide.StaticPath
+	}
 
 	glog.Info("Conf: \n" + string(bytes))
 }
