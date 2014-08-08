@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8">
-		<title>Wide Demo</title>
+		<title>Wide</title>
 		<link rel="stylesheet" href="{{.StaticServer}}/static/codemirror-4.4/codemirror.css">
 		<link rel="stylesheet" href="{{.StaticServer}}/static/codemirror-4.4/addon/hint/show-hint.css">
 		  
@@ -47,13 +47,21 @@ func main() {
 			</div>	
 	
 			<div>
-				<button id="saveBtn" onclick="save()">Save</button>
-				<button id="runBtn" onclick="run()">Run</button>
+				<button id="saveBtn" onclick="save()">Save</button>				
 				<button id="fmtBtn" onclick="fmt()">Format</button>
+				<button id="runBtn" onclick="run()">Run</button>
 			</div>
 
 			<div>			
-				<textarea id="output" rows="10" cols="80"></textarea>
+				<textarea id="output" class="output" rows="10"></textarea>
+				
+				<span class="shell">
+					<div>
+						<input id="shellInput" class="shellInput"></input>
+					</div>
+					
+					<textarea id="shellOutput" class="shellOutput" rows="8"></textarea>
+				</span>
 			</div>
 			
 		</div>
@@ -73,6 +81,8 @@ func main() {
 					"Ctrl-\\": "autocomplete"
 				}
 		  	});
+			
+			editor.setSize('100%', 400)
 			
 			editor.addKeyMap({
 				/*
@@ -117,7 +127,7 @@ func main() {
 					var autocompleteArray = JSON.parse(data.output)[1];
 					
 					for	(var i = 0; i < autocompleteArray.length; i++) {
-						autocompleteHints[i] = '(' + autocompleteArray[i].class + ')' + autocompleteArray[i].name;
+						autocompleteHints[i] = autocompleteArray[i].name;
 					}
 					
 					// console.log(autocompleteHints);
@@ -131,22 +141,37 @@ func main() {
 		        console.log('[editor onerror] ' + e);
 		    }
 			
-			/*
-			testWS = new WebSocket('ws://localhost:8083');
-			testWS.onopen = function() {
-		        console.log('[testWS onopen] connected');
+			shellWS = new WebSocket('ws://localhost:8080/shell/ws');
+			shellWS.onopen = function() {
+		        console.log('[shell onopen] connected');
 		    }
-		    testWS.onmessage = function(e) {
-				console.log('[testWS onmessage]' + e.data);				
+		    shellWS.onmessage = function(e) {
+				console.log('[shell onmessage]' + e.data);	
+				
+				var data = JSON.parse(e.data);
+				if ('init-shell' !== data.cmd) {
+					$('#shellOutput').val(data.output);
+				}						
 		    }
-		    testWS.onclose = function(e) {
-		        console.log('[testWS onclose] disconnected (' + e.code + ')');
-		        delete testWS;
+		    shellWS.onclose = function(e) {
+		        console.log('[shell onclose] disconnected (' + e.code + ')');
+		        delete shellWS;
 		    }
-		    testWS.onerror = function (e) {
-		        console.log('[testWS onerror] ' + e);
+		    shellWS.onerror = function (e) {
+		        console.log('[shell onerror] ' + e);
 		    }
-			*/
+			
+		  	$('#shellInput').keydown(function(event) {  
+		        if(13 === event.which) {  
+					var input = {
+						cmd: $('#shellInput').val()
+					};
+					
+		            shellWS.send(JSON.stringify(input));
+					
+					$('#shellInput').val('');
+		        }  
+		    }); 
 			
 			function save() {
 				var request = {

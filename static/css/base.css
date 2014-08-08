@@ -19,3 +19,16 @@
 .autocompleteHint li {
 	list-style: none;
 }
+
+.output {
+	width: 49%
+}
+
+.shell {
+	float: right;
+	width: 49%
+}
+
+.shellInput, .shellOutput {	
+	width: 99%
+}

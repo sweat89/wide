@@ -4,6 +4,7 @@ package main
 // 1. 项目支持
 // 2. 编辑锁
 // 3. Shell
+//
 
 import (
 	"bytes"
@@ -237,6 +238,7 @@ func fmtHandler(w http.ResponseWriter, r *http.Request) {
 
 var outputWS = map[string]*websocket.Conn{}
 var editorWS = map[string]*websocket.Conn{}
+var shellWS = map[string]*websocket.Conn{}
 
 func outputHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := sessionStore.Get(r, "wide-session")
@@ -244,7 +246,7 @@ func outputHandler(w http.ResponseWriter, r *http.Request) {
 
 	outputWS[sid], _ = websocket.Upgrade(w, r, nil, 1024, 1024)
 
-	ret := map[string]interface{}{"output": "Ouput initialized\n"}
+	ret := map[string]interface{}{"output": "Ouput initialized\n", "cmd": "init-output"}
 	outputWS[sid].WriteJSON(&ret)
 
 	glog.Info("Output channels: ", len(outputWS))
@@ -256,7 +258,7 @@ func editorWSHandler(w http.ResponseWriter, r *http.Request) {
 
 	editorWS[sid], _ = websocket.Upgrade(w, r, nil, 1024, 1024)
 
-	ret := map[string]interface{}{"output": "Editor initialized", "cmd": "init"}
+	ret := map[string]interface{}{"output": "Editor initialized", "cmd": "init-editor"}
 	editorWS[sid].WriteJSON(&ret)
 
 	glog.Info("Editor channels: ", len(outputWS))
@@ -306,6 +308,56 @@ func editorWSHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func shellWSHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "wide-session")
+	sid := session.Values["id"].(string)
+
+	shellWS[sid], _ = websocket.Upgrade(w, r, nil, 1024, 1024)
+
+	ret := map[string]interface{}{"output": "Shell initialized", "cmd": "init-shell"}
+	shellWS[sid].WriteJSON(&ret)
+
+	glog.Info("Shell channels: ", len(outputWS))
+
+	input := map[string]interface{}{}
+
+	for {
+		if err := shellWS[sid].ReadJSON(&input); err != nil {
+			if err.Error() == "EOF" {
+				return
+			}
+			// ErrShortWrite means that a write accepted fewer bytes than requested but failed to return an explicit error.
+			if err.Error() == "unexpected EOF" {
+				return
+			}
+
+			glog.Error("Shell WS ERROR: " + err.Error())
+			return
+		}
+
+		// argv := []string{"-f=json", "autocomplete", strconv.Itoa(offset)}
+
+		var output bytes.Buffer
+
+		inputCmd := input["cmd"].(string)
+
+		cmdWithArgs := strings.Split(inputCmd, " ")
+
+		cmd := exec.Command(cmdWithArgs[0], cmdWithArgs[:1]...)
+		cmd.Stdout = &output
+
+		cmd.Start()
+		cmd.Wait()
+
+		ret = map[string]interface{}{"output": string(output.Bytes()), "cmd": "shell-output"}
+
+		if err := shellWS[sid].WriteJSON(&ret); err != nil {
+			glog.Error("Shell WS ERROR: " + err.Error())
+			return
+		}
+	}
+}
+
 func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
@@ -316,6 +368,7 @@ func main() {
 
 	http.HandleFunc("/output/ws", outputHandler)
 	http.HandleFunc("/editor/ws", editorWSHandler)
+	http.HandleFunc("/shell/ws", shellWSHandler)
 
 	err := http.ListenAndServe(":"+conf.Wide.ServerPort, nil)
 	if err != nil {
