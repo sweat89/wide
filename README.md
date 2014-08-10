@@ -24,6 +24,6 @@ Licensed under the [Apache License 2.0](https://github.com/88250/wide/blob/maste
 
 * [golang](http://golang.org)
 * [CodeMirror](https://github.com/marijnh/CodeMirror)
-* [jstree](https://github.com/vakata/jstree) 
+* [zTree](https://github.com/zTree/zTree_v3) 
 * [gocode](https://github.com/nsf/gocode)
 * [Gorilla](https://github.com/gorilla)
