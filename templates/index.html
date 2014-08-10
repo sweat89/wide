@@ -8,22 +8,27 @@
 		  
 		<link rel="stylesheet" href="{{.Wide.StaticServer}}/static/codemirror-4.4/theme/lesser-dark.css">
 		<link rel="stylesheet" href="{{.Wide.StaticServer}}/static/css/base.css">
+		<link rel="stylesheet" href="{{.Wide.StaticServer}}/static/ztree/zTreeStyle.css">
 		
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/codemirror.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/addon/hint/show-hint.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/js/go-hint.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/go/go.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/js/lib/jquery-2.1.1.min.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/js/lib/jquery.ztree.all-3.5.min.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/js/lib/reconnecting-websocket.js"></script>
 	</head>
 	
 	<body>
-		<div>
+		<div>		    
 			<div>
 				<div></div>
 			</div>
 			
-			<div >
+			<ul id="files" class="ztree	"></ul>
+			
+			<div>
+			
 				<div>			
 					<textarea id="code" name="code">
 // You can edit this code!
@@ -68,8 +73,6 @@ func main() {
 		</div>
 		
 		<script type="text/javascript">
-			autocompleteHints = [];
-			      
 			CodeMirror.commands.autocomplete = function(cm) {
         		cm.showHint({hint: CodeMirror.hint.go});
       		}
@@ -86,15 +89,11 @@ func main() {
 			editor.setSize('100%', 400)
 			
 			editor.addKeyMap({
-				/*
-			  	"'.'": function(cm) {
-			  	  	
-			  	}*/
+				
 			});
 			
 			editor.on('keyup', function(cm, event) {
-				
-				
+
 			});
 			
 			outputWS = new WebSocket('{{.Wide.OutputChannel}}/output/ws');
@@ -120,19 +119,7 @@ func main() {
 		        console.log('[editor onopen] connected');
 		    }
 		    editorWS.onmessage = function(e) {
-				// console.log('[editor onmessage]' + e.data);
-				
-				var data = JSON.parse(e.data);
-				
-				if ('autocomplete' === data.cmd) {
-					var autocompleteArray = JSON.parse(data.output)[1];
-					
-					for	(var i = 0; i < autocompleteArray.length; i++) {
-						autocompleteHints[i] = autocompleteArray[i].name;
-					}
-					
-					// console.log(autocompleteHints);
-				}
+				 console.log('[editor onmessage]' + e.data);
 		    }
 		    editorWS.onclose = function(e) {
 		        console.log('[editor onclose] disconnected (' + e.code + ')');
@@ -234,6 +221,64 @@ func main() {
 					}
 				});
 			}
+			
+			$.ajax({
+				type: 'GET',
+				url: '/files',
+				dataType: "json",
+				success: function(data) {
+					if (data.succ) {
+						$.fn.zTree.init($("#files"), {}, data.root.children);
+					}
+				}
+			});
+			/*	
+			var zNodes = [
+				{ name:"父节点1 - 展开", open:true,
+					children: [
+						{ name:"父节点11 - 折叠",
+							children: [
+								{ name:"叶子节点111"},
+								{ name:"叶子节点112"},
+								{ name:"叶子节点113"},
+								{ name:"叶子节点114"}
+							]},
+						{ name:"父节点12 - 折叠",
+							children: [
+								{ name:"叶子节点121"},
+								{ name:"叶子节点122"},
+								{ name:"叶子节点123"},
+								{ name:"叶子节点124"}
+							]},
+						{ name:"父节点13 - 没有子节点", isParent:true}
+					]},
+				{ name:"父节点2 - 折叠",
+					children: [
+						{ name:"父节点21 - 展开", open:true,
+							children: [
+								{ name:"叶子节点211"},
+								{ name:"叶子节点212"},
+								{ name:"叶子节点213"},
+								{ name:"叶子节点214"}
+							]},
+						{ name:"父节点22 - 折叠",
+							children: [
+								{ name:"叶子节点221"},
+								{ name:"叶子节点222"},
+								{ name:"叶子节点223"},
+								{ name:"叶子节点224"}
+							]},
+						{ name:"父节点23 - 折叠",
+							children: [
+								{ name:"叶子节点231"},
+								{ name:"叶子节点232"},
+								{ name:"叶子节点233"},
+								{ name:"叶子节点234"}
+							]}
+					]},
+				{ name:"父节点3 - 没有子节点", isParent:true}
+			];
+			*/
 		</script>
 	</body>
 

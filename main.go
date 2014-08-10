@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -308,6 +310,44 @@ func editorWSHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func autocompleteHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+
+	var args map[string]interface{}
+
+	if err := decoder.Decode(&args); err != nil {
+		glog.Error(err)
+		http.Error(w, err.Error(), 500)
+
+		return
+	}
+
+	code := args["code"].(string)
+	line := int(args["cursorLine"].(float64))
+	ch := int(args["cursorCh"].(float64))
+
+	offset := getCursorOffset(code, line, ch)
+
+	// glog.Infof("offset: %d", offset)
+
+	argv := []string{"-f=json", "autocomplete", strconv.Itoa(offset)}
+
+	var output bytes.Buffer
+
+	cmd := exec.Command("gocode", argv...)
+	cmd.Stdout = &output
+
+	stdin, _ := cmd.StdinPipe()
+	cmd.Start()
+	stdin.Write([]byte(code))
+	stdin.Close()
+	cmd.Wait()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(output.Bytes())
+
+}
+
 func shellWSHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := sessionStore.Get(r, "wide-session")
 	sid := session.Values["id"].(string)
@@ -356,6 +396,58 @@ func shellWSHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type FileNode struct {
+	Name      string      `json:"name"`
+	Path      string      `json:"path"`
+	FileNodes []*FileNode `json:"children"`
+}
+
+func walk(path string, info os.FileInfo, node *FileNode) {
+	files := listFiles(path)
+
+	for _, filename := range files {
+		fpath := filepath.Join(path, filename)
+
+		fio, _ := os.Lstat(fpath)
+
+		child := FileNode{filename, fpath, []*FileNode{}}
+		node.FileNodes = append(node.FileNodes, &child)
+
+		if fio.IsDir() {
+			walk(fpath, fio, &child)
+		}
+	}
+
+	return
+}
+
+func listFiles(dirname string) []string {
+	f, _ := os.Open(dirname)
+
+	names, _ := f.Readdirnames(-1)
+	f.Close()
+
+	sort.Strings(names)
+
+	return names
+}
+
+func getFiles(w http.ResponseWriter, r *http.Request) {
+	data := map[string]interface{}{"succ": true}
+
+	root := FileNode{"projects", conf.Wide.ProjectHome, []*FileNode{}}
+	fileInfo, _ := os.Lstat(conf.Wide.ProjectHome)
+
+	walk(conf.Wide.ProjectHome, fileInfo, &root)
+
+	data["root"] = root
+
+	ret, _ := json.Marshal(data)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(ret)
+}
+
 func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
@@ -364,9 +456,13 @@ func main() {
 	http.HandleFunc("/run", runHandler)
 	http.HandleFunc("/fmt", fmtHandler)
 
+	http.HandleFunc("/files", getFiles)
+
 	http.HandleFunc("/output/ws", outputHandler)
 	http.HandleFunc("/editor/ws", editorWSHandler)
 	http.HandleFunc("/shell/ws", shellWSHandler)
+
+	http.HandleFunc("/autocomplete", autocompleteHandler)
 
 	err := http.ListenAndServe(":"+conf.Wide.ServerPort, nil)
 	if err != nil {
