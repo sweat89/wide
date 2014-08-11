@@ -10,7 +10,6 @@ A simple <b>W</b>eb **IDE** for golang.
 * Format
 * Run & Output
 * Multiplayer
-* Projects
 * Navigation & Jump (TBD)
 * Shell (TBD)
 
