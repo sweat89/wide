@@ -20,6 +20,8 @@
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/javascript/javascript.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/markdown/markdown.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/css/css.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/shell/shell.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/sql/sql.js"></script>
 				
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/js/lib/jquery-2.1.1.min.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/ztree/jquery.ztree.all-3.5.min.js"></script>
@@ -29,33 +31,16 @@
 	<body>
 		<div class="content"> 		
 			
-			<ul id="files" class="ztree"></ul>
+				<ul id="files" class="ztree"></ul>
 			
 				<div class="edit-panel">			
-					<textarea id="code" name="code">
-// You can edit this code!
-// Click here and start typing.
-package main
-
-import (
-    "fmt"
-    "time"
-)
-
-func main() {
-	for i := 0; i < 5; i++ {
-		fmt.Println("Hello, 世界")
-		
-		time.Sleep(time.Second)
-	}
-}
-					</textarea>
+					<textarea id="code" name="code"></textarea>
 					
 				</div>
 			</div>
 	
 			<div>
-				<!--<button id="saveBtn" onclick="save()">Save</button>-->
+				<button id="saveBtn" onclick="save()">Save</button>
 				<button id="fmtBtn" onclick="fmt()">Format</button>
 				<button id="runBtn" onclick="run()">Run</button>
 			</div>
@@ -77,7 +62,6 @@ func main() {
 		<script type="text/javascript">
 			curProject = "";
 			curFile = "";
-		
 		
 			CodeMirror.commands.autocomplete = function(cm) {
         		cm.showHint({hint: CodeMirror.hint.go});
@@ -270,7 +254,7 @@ func main() {
 				success: function(data) {
 					if (data.succ) {
 						var tree = $.fn.zTree.init($("#files"), setting, data.root.children);
-						tree.expandAll(true);
+						//tree.expandAll(true);
 					}
 				}
 			});

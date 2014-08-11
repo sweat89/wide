@@ -16,6 +16,8 @@
 .ztree {
 	position: absolute;
 	width: 20%;
+	height: 440px;
+	overflow: auto;
 }
 
 

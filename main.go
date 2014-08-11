@@ -429,7 +429,8 @@ func getFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	path := args["path"].(string)
-	extension := path[strings.LastIndex(path, "."):]
+
+	idx := strings.LastIndex(path, ".")
 
 	buf, _ := ioutil.ReadFile(path)
 
@@ -437,6 +438,11 @@ func getFile(w http.ResponseWriter, r *http.Request) {
 
 	data := map[string]interface{}{"succ": true}
 	data["content"] = content
+
+	extension := ""
+	if 0 <= idx {
+		extension = path[idx:]
+	}
 	data["mode"] = getEditorMode(extension)
 
 	ret, _ := json.Marshal(data)
@@ -459,6 +465,10 @@ func getEditorMode(filenameExtension string) string {
 		return "css"
 	case ".xml":
 		return "xml"
+	case ".sh":
+		return "shell"
+	case ".sql":
+		return "sql"
 	default:
 		return "text"
 	}
