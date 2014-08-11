@@ -1,23 +1,28 @@
-.autocompleteHint {
+.fn-clear:before,
+.fn-clear:after {
+    display: table;
+    content: "";
+}
+
+.fn-clear:after {
+    clear: both;
+}
+
+.content {
+	position: relative;
+	height: 460px;
+}
+
+.ztree {
 	position: absolute;
-	height: 180px;
-	width: 230px;
-	background-color: #FFF;
-	top: 50px;
-	left: 70px;
-	z-index: 10;
-	display: none;
-	overflow: auto;
-	border:1px solid #DDD;
+	width: 20%;
 }
 
-.autocompleteHint ul {
-	padding:5px;
-	margin:0;
-}
 
-.autocompleteHint li {
-	list-style: none;
+.edit-panel {
+	position: absolute;
+	width: 80%;
+	left: 20%;
 }
 
 .output {

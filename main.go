@@ -10,17 +10,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/88250/wide/conf"
+	"github.com/88250/wide/files"
 	"github.com/golang/glog"
 	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -396,49 +396,13 @@ func shellWSHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type FileNode struct {
-	Name      string      `json:"name"`
-	Path      string      `json:"path"`
-	FileNodes []*FileNode `json:"children"`
-}
-
-func walk(path string, info os.FileInfo, node *FileNode) {
-	files := listFiles(path)
-
-	for _, filename := range files {
-		fpath := filepath.Join(path, filename)
-
-		fio, _ := os.Lstat(fpath)
-
-		child := FileNode{filename, fpath, []*FileNode{}}
-		node.FileNodes = append(node.FileNodes, &child)
-
-		if fio.IsDir() {
-			walk(fpath, fio, &child)
-		}
-	}
-
-	return
-}
-
-func listFiles(dirname string) []string {
-	f, _ := os.Open(dirname)
-
-	names, _ := f.Readdirnames(-1)
-	f.Close()
-
-	sort.Strings(names)
-
-	return names
-}
-
 func getFiles(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{"succ": true}
 
-	root := FileNode{"projects", conf.Wide.ProjectHome, []*FileNode{}}
+	root := files.FileNode{"projects", conf.Wide.ProjectHome, "d", []*files.FileNode{}}
 	fileInfo, _ := os.Lstat(conf.Wide.ProjectHome)
 
-	walk(conf.Wide.ProjectHome, fileInfo, &root)
+	files.Walk(conf.Wide.ProjectHome, fileInfo, &root)
 
 	data["root"] = root
 
@@ -446,6 +410,54 @@ func getFiles(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(ret)
+}
+
+func getFile(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+
+	var args map[string]interface{}
+
+	if err := decoder.Decode(&args); err != nil {
+		glog.Error(err)
+		http.Error(w, err.Error(), 500)
+
+		return
+	}
+
+	path := args["path"].(string)
+	extension := path[strings.LastIndex(path, "."):]
+
+	buf, _ := ioutil.ReadFile(path)
+
+	content := string(buf)
+
+	data := map[string]interface{}{"succ": true}
+	data["content"] = content
+	data["mode"] = getEditorMode(extension)
+
+	ret, _ := json.Marshal(data)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(ret)
+}
+
+func getEditorMode(filenameExtension string) string {
+	switch filenameExtension {
+	case ".go":
+		return "go"
+	case ".html":
+		return "htmlmixed"
+	case ".md":
+		return "markdown"
+	case ".js", ".json":
+		return "javascript"
+	case ".css":
+		return "css"
+	case ".xml":
+		return "xml"
+	default:
+		return "text"
+	}
 }
 
 func main() {
@@ -457,6 +469,7 @@ func main() {
 	http.HandleFunc("/fmt", fmtHandler)
 
 	http.HandleFunc("/files", getFiles)
+	http.HandleFunc("/file", getFile)
 
 	http.HandleFunc("/output/ws", outputHandler)
 	http.HandleFunc("/editor/ws", editorWSHandler)

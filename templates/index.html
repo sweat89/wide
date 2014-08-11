@@ -13,23 +13,25 @@
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/codemirror.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/addon/hint/show-hint.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/js/go-hint.js"></script>
+		
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/go/go.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/xml/xml.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/htmlmixed/htmlmixed.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/javascript/javascript.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/markdown/markdown.js"></script>
+		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/codemirror-4.4/mode/css/css.js"></script>
+				
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/js/lib/jquery-2.1.1.min.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/ztree/jquery.ztree.all-3.5.min.js"></script>
 		<script type="text/javascript" src="{{.Wide.StaticServer}}/static/js/lib/reconnecting-websocket.js"></script>
 	</head>
 	
 	<body>
-		<div>		    
-			<div>
-				<div></div>
-			</div>
+		<div class="content"> 		
 			
-			<ul id="files" class="ztree	"></ul>
+			<ul id="files" class="ztree"></ul>
 			
-			<div>
-			
-				<div>			
+				<div class="edit-panel">			
 					<textarea id="code" name="code">
 // You can edit this code!
 // Click here and start typing.
@@ -48,9 +50,9 @@ func main() {
 	}
 }
 					</textarea>
-					<div id="autocompleteHint" class="autocompleteHint"></div>
+					
 				</div>
-			</div>	
+			</div>
 	
 			<div>
 				<!--<button id="saveBtn" onclick="save()">Save</button>-->
@@ -70,7 +72,7 @@ func main() {
 				</span>
 			</div>
 			
-		</div>
+		
 		
 		<script type="text/javascript">
 			CodeMirror.commands.autocomplete = function(cm) {
@@ -86,7 +88,7 @@ func main() {
 				}
 		  	});
 			
-			editor.setSize('100%', 400)
+			editor.setSize('100%', 450)
 			
 			editor.addKeyMap({
 				
@@ -222,13 +224,41 @@ func main() {
 				});
 			}
 			
+			var setting = {
+				callback: {
+					onClick: function(event, treeId, treeNode, clickFlag) {
+						console.log(treeNode);
+						console.log(clickFlag);
+						
+						if ("f" === treeNode.type) { // 如果单击了文件
+							var request = {
+								path: treeNode.path
+							};
+							
+							$.ajax({
+								type: 'POST',
+								url: '/file',
+								data: JSON.stringify(request),
+								dataType: "json",
+								success: function(data) {
+									if (data.succ) {
+										editor.setValue(data.content);
+										editor.setOption("mode", data.mode);
+									}
+								}
+							});
+						}
+					}	
+				}
+			};
+			
 			$.ajax({
 				type: 'GET',
 				url: '/files',
 				dataType: "json",
 				success: function(data) {
 					if (data.succ) {
-						$.fn.zTree.init($("#files"), {}, data.root.children);
+						$.fn.zTree.init($("#files"), setting, data.root.children);
 					}
 				}
 			});
