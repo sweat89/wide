@@ -75,6 +75,10 @@ func main() {
 		
 		
 		<script type="text/javascript">
+			curProject = "";
+			curFile = "";
+		
+		
 			CodeMirror.commands.autocomplete = function(cm) {
         		cm.showHint({hint: CodeMirror.hint.go});
       		}
@@ -165,8 +169,8 @@ func main() {
 			
 			function save() {
 				var request = {
-					"project": "hello",
-					"file": "main.go",
+					"project": curProject,
+					"file": curFile,
 					"code": editor.getValue()
 				};
 				
@@ -183,8 +187,8 @@ func main() {
 			
 			function run() {
 				var request = {
-					"project": "hello",
-					"file": "main.go",
+					"project": curProject,
+					"file": curFile,
 					"code": editor.getValue()
 				};
 				
@@ -204,8 +208,8 @@ func main() {
 			
 			function fmt() {
 				var request = {
-					"project": "hello",
-					"file": "main.go",
+					"project": curProject,
+					"file": curFile,
 					"code": editor.getValue(),
 					"cursorLine": editor.getCursor().line,
 					"cursorCh": editor.getCursor().ch
@@ -227,8 +231,15 @@ func main() {
 			var setting = {
 				callback: {
 					onClick: function(event, treeId, treeNode, clickFlag) {
-						console.log(treeNode);
-						console.log(clickFlag);
+						level = treeNode.level;
+						curNode = treeNode;
+						while (level > 0) {
+							curNode = curNode.getParentNode();
+							level--;
+						}
+						
+						curProject = curNode.name;
+						curFile = treeNode.path;
 						
 						if ("f" === treeNode.type) { // 如果单击了文件
 							var request = {
@@ -258,7 +269,8 @@ func main() {
 				dataType: "json",
 				success: function(data) {
 					if (data.succ) {
-						$.fn.zTree.init($("#files"), setting, data.root.children);
+						var tree = $.fn.zTree.init($("#files"), setting, data.root.children);
+						tree.expandAll(true);
 					}
 				}
 			});

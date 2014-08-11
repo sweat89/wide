@@ -62,9 +62,9 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectName := args["project"].(string)
-	projectPath := conf.Wide.ProjectHome + PATH_SEPARATOR + projectName
-	filePath := projectPath + PATH_SEPARATOR + args["file"].(string)
+	//projectName := args["project"].(string)
+	//projectPath := conf.Wide.ProjectHome + PATH_SEPARATOR + projectName
+	filePath := args["file"].(string)
 
 	fout, err := os.Create(filePath)
 
@@ -104,9 +104,9 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectName := args["project"].(string)
-	projectPath := conf.Wide.ProjectHome + PATH_SEPARATOR + projectName
-	filePath := projectPath + PATH_SEPARATOR + args["file"].(string)
+	//projectName := args["project"].(string)
+	//projectPath := conf.Wide.ProjectHome + PATH_SEPARATOR + projectName
+	filePath := args["file"].(string)
 
 	fout, err := os.Create(filePath)
 
@@ -154,15 +154,19 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 
 	rec := map[string]interface{}{}
 
-	go func() {
+	go func(runningId int) {
 		session, _ := sessionStore.Get(r, "wide-session")
 		sid := session.Values["id"].(string)
+
+		glog.Infof("Session [%s] is running [id=%d, file=%s]", sid, runningId, filePath)
 
 		for {
 			buf := make([]byte, 1024)
 			count, err := reader.Read(buf)
 
 			if nil != err || 0 == count {
+				glog.Infof("Session [%s] 's running [id=%d, file=%s] has done", sid, runningId, filePath)
+
 				break
 			} else {
 				rec["output"] = string(buf[:count])
@@ -176,7 +180,7 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-	}()
+	}(rand.Int())
 
 	ret, _ := json.Marshal(map[string]interface{}{"succ": true})
 
@@ -196,9 +200,9 @@ func fmtHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectName := args["project"].(string)
-	projectPath := conf.Wide.ProjectHome + PATH_SEPARATOR + projectName
-	filePath := projectPath + PATH_SEPARATOR + args["file"].(string)
+	//projectName := args["project"].(string)
+	//projectPath := conf.Wide.ProjectHome + PATH_SEPARATOR + projectName
+	filePath := args["file"].(string)
 
 	fout, err := os.Create(filePath)
 
@@ -251,7 +255,7 @@ func outputHandler(w http.ResponseWriter, r *http.Request) {
 	ret := map[string]interface{}{"output": "Ouput initialized\n", "cmd": "init-output"}
 	outputWS[sid].WriteJSON(&ret)
 
-	glog.Info("Output channels: ", len(outputWS))
+	glog.Infof("Open a new [Output Channel] with session [%s], %d", sid, len(outputWS))
 }
 
 func editorWSHandler(w http.ResponseWriter, r *http.Request) {
@@ -263,7 +267,7 @@ func editorWSHandler(w http.ResponseWriter, r *http.Request) {
 	ret := map[string]interface{}{"output": "Editor initialized", "cmd": "init-editor"}
 	editorWS[sid].WriteJSON(&ret)
 
-	glog.Info("Editor channels: ", len(outputWS))
+	glog.Infof("Open a new [Editor Channel] with session [%s], %d", sid, len(editorWS))
 
 	args := map[string]interface{}{}
 	for {
@@ -357,7 +361,7 @@ func shellWSHandler(w http.ResponseWriter, r *http.Request) {
 	ret := map[string]interface{}{"output": "Shell initialized", "cmd": "init-shell"}
 	shellWS[sid].WriteJSON(&ret)
 
-	glog.Info("Shell channels: ", len(outputWS))
+	glog.Infof("Open a new [Shell Channel] with session [%s], %d", sid, len(shellWS))
 
 	input := map[string]interface{}{}
 
