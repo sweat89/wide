@@ -93,6 +93,9 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func runHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "wide-session")
+	sid := session.Values["id"].(string)
+
 	decoder := json.NewDecoder(r.Body)
 
 	var args map[string]interface{}
@@ -104,8 +107,6 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//projectName := args["project"].(string)
-	//projectPath := conf.Wide.ProjectHome + PATH_SEPARATOR + projectName
 	filePath := args["file"].(string)
 
 	fout, err := os.Create(filePath)
@@ -155,9 +156,6 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 	rec := map[string]interface{}{}
 
 	go func(runningId int) {
-		session, _ := sessionStore.Get(r, "wide-session")
-		sid := session.Values["id"].(string)
-
 		glog.Infof("Session [%s] is running [id=%d, file=%s]", sid, runningId, filePath)
 
 		for {
@@ -255,7 +253,7 @@ func outputHandler(w http.ResponseWriter, r *http.Request) {
 	ret := map[string]interface{}{"output": "Ouput initialized\n", "cmd": "init-output"}
 	outputWS[sid].WriteJSON(&ret)
 
-	glog.Infof("Open a new [Output Channel] with session [%s], %d", sid, len(outputWS))
+	glog.Infof("Open a new [Output] with session [%s], %d", sid, len(outputWS))
 }
 
 func editorWSHandler(w http.ResponseWriter, r *http.Request) {
@@ -267,7 +265,7 @@ func editorWSHandler(w http.ResponseWriter, r *http.Request) {
 	ret := map[string]interface{}{"output": "Editor initialized", "cmd": "init-editor"}
 	editorWS[sid].WriteJSON(&ret)
 
-	glog.Infof("Open a new [Editor Channel] with session [%s], %d", sid, len(editorWS))
+	glog.Infof("Open a new [Editor] with session [%s], %d", sid, len(editorWS))
 
 	args := map[string]interface{}{}
 	for {
@@ -361,7 +359,7 @@ func shellWSHandler(w http.ResponseWriter, r *http.Request) {
 	ret := map[string]interface{}{"output": "Shell initialized", "cmd": "init-shell"}
 	shellWS[sid].WriteJSON(&ret)
 
-	glog.Infof("Open a new [Shell Channel] with session [%s], %d", sid, len(shellWS))
+	glog.Infof("Open a new [Shell] with session [%s], %d", sid, len(shellWS))
 
 	input := map[string]interface{}{}
 
