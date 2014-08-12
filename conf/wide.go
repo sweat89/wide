@@ -5,6 +5,9 @@ import (
 	"flag"
 	"github.com/golang/glog"
 	"io/ioutil"
+	"net"
+	"os"
+	"strings"
 )
 
 type Conf struct {
@@ -47,5 +50,23 @@ func init() {
 			Wide.StaticPath
 	}
 
+	ip := getNetworkInterface(1)
+	glog.Infof("IP [%s]", ip)
+
+	Wide.EditorChannel = strings.Replace(Wide.EditorChannel, "{IP}", ip, 1)
+	Wide.OutputChannel = strings.Replace(Wide.OutputChannel, "{IP}", ip, 1)
+	Wide.ShellChannel = strings.Replace(Wide.ShellChannel, "{IP}", ip, 1)
+
 	glog.Info("Conf: \n" + string(bytes))
+}
+
+func getNetworkInterface(idx int) string {
+	addrs, err := net.InterfaceAddrs()
+
+	if err != nil {
+		glog.Error(err)
+		os.Exit(1)
+	}
+
+	return addrs[idx].String()
 }
