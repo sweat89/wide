@@ -489,7 +489,7 @@ func main() {
 
 	http.HandleFunc("/autocomplete", autocompleteHandler)
 
-	err := http.ListenAndServe(":"+conf.Wide.ServerPort, nil)
+	err := http.ListenAndServe(conf.Wide.Server, nil)
 	if err != nil {
 		glog.Fatal(err)
 	}

@@ -85,7 +85,7 @@
 
 			});
 			
-			outputWS = new WebSocket('{{.Wide.OutputChannel}}/output/ws');
+			outputWS = new WebSocket({{.Wide.OutputChannel}} + '/output/ws');
 			outputWS.onopen = function() {
 		        console.log('[output onopen] connected');
 		    }
@@ -103,7 +103,7 @@
 		        console.log('[output onerror] ' + e);
 		    }
 			
-			editorWS = new WebSocket('{{.Wide.EditorChannel}}/editor/ws');
+			editorWS = new WebSocket({{.Wide.EditorChannel}} + '/editor/ws');
 			editorWS.onopen = function() {
 		        console.log('[editor onopen] connected');
 		    }
@@ -118,7 +118,7 @@
 		        console.log('[editor onerror] ' + e);
 		    }
 			
-			shellWS = new WebSocket('{{.Wide.ShellChannel}}/shell/ws');
+			shellWS = new WebSocket({{.Wide.ShellChannel}} + '/shell/ws');
 			shellWS.onopen = function() {
 		        console.log('[shell onopen] connected');
 		    }

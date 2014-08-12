@@ -11,10 +11,8 @@ import (
 )
 
 type Conf struct {
-	ServerPort            string
-	StaticServerScheme    string
-	StaticServerHost      string
-	StaticServerPort      string
+	Server                string
+	StaticServer          string
 	EditorChannel         string
 	OutputChannel         string
 	ShellChannel          string
@@ -23,8 +21,6 @@ type Conf struct {
 	StaticPath            string
 	RuntimeMode           string
 	ProjectHome           string
-
-	StaticServer string
 }
 
 var Wide Conf
@@ -42,16 +38,11 @@ func init() {
 		return
 	}
 
-	Wide.StaticServer = ""
-	if "" != Wide.StaticServerHost {
-		Wide.StaticServer = Wide.StaticServerScheme +
-			"://" + Wide.StaticServerHost +
-			":" + Wide.StaticServerPort +
-			Wide.StaticPath
-	}
-
-	ip := getNetworkInterface(1)
+	ip := getNetworkInterface()
 	glog.Infof("IP [%s]", ip)
+
+	Wide.Server = strings.Replace(Wide.Server, "{IP}", ip, 1)
+	Wide.StaticServer = strings.Replace(Wide.StaticServer, "{IP}", ip, 1)
 
 	Wide.EditorChannel = strings.Replace(Wide.EditorChannel, "{IP}", ip, 1)
 	Wide.OutputChannel = strings.Replace(Wide.OutputChannel, "{IP}", ip, 1)
@@ -60,7 +51,7 @@ func init() {
 	glog.Info("Conf: \n" + string(bytes))
 }
 
-func getNetworkInterface(idx int) string {
+func getNetworkInterface() string {
 	addrs, err := net.InterfaceAddrs()
 
 	if err != nil {
@@ -68,5 +59,12 @@ func getNetworkInterface(idx int) string {
 		os.Exit(1)
 	}
 
-	return addrs[idx].String()
+	ret := "0.0.0.0"
+	for _, addr := range addrs {
+		if "0.0.0.0" != addr.String() {
+			return addr.String()
+		}
+	}
+
+	return ret
 }
